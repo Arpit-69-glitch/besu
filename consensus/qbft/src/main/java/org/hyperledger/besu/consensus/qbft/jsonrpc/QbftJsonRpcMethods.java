@@ -19,6 +19,7 @@ import org.hyperledger.besu.consensus.common.bft.BftContext;
 import org.hyperledger.besu.consensus.common.validator.CommitteeProvider;
 import org.hyperledger.besu.consensus.common.validator.ValidatorProvider;
 import org.hyperledger.besu.consensus.qbft.jsonrpc.methods.BelGetCommittee;
+import org.hyperledger.besu.consensus.qbft.jsonrpc.methods.BelGetValidators;
 import org.hyperledger.besu.consensus.qbft.jsonrpc.methods.QbftDiscardValidatorVote;
 import org.hyperledger.besu.consensus.qbft.jsonrpc.methods.QbftGetPendingVotes;
 import org.hyperledger.besu.consensus.qbft.jsonrpc.methods.QbftGetSignerMetrics;
@@ -79,6 +80,8 @@ public class QbftJsonRpcMethods extends ApiGroupJsonRpcMethods {
             context.getBlockchain(),
             context.getWorldStateArchive(),
             miningParameters);
+    final BelValidatorMetadataProvider metadataProvider =
+        new BelValidatorMetadataProvider(readOnlyValidatorProvider, blockchainQueries);
     final BftContext bftContext = context.getConsensusContext(BftContext.class);
     final BlockInterface blockInterface = bftContext.getBlockInterface();
     final ValidatorProvider validatorProvider = bftContext.getValidatorProvider();
@@ -88,6 +91,8 @@ public class QbftJsonRpcMethods extends ApiGroupJsonRpcMethods {
             mapOf(
                 new QbftProposeValidatorVote(validatorProvider),
                 new QbftGetValidatorsByBlockNumber(blockchainQueries, readOnlyValidatorProvider),
+                new BelGetValidators(
+                    blockchainQueries, readOnlyValidatorProvider, metadataProvider),
                 new QbftDiscardValidatorVote(validatorProvider),
                 new QbftGetValidatorsByBlockHash(context.getBlockchain(), readOnlyValidatorProvider),
                 new QbftGetSignerMetrics(
