@@ -36,6 +36,7 @@ dependencies {
   implementation project(':pki')
   implementation project(':consensus:clique')
   implementation project(':consensus:common')
+  implementation project(':consensus:bel')
   implementation project(':consensus:ibft')
   implementation project(':consensus:merge')
   implementation project(':consensus:qbft')

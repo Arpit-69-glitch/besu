@@ -43,6 +43,9 @@ import org.hyperledger.besu.consensus.common.bft.statemachine.BftEventHandler;
 import org.hyperledger.besu.consensus.common.bft.statemachine.BftFinalState;
 import org.hyperledger.besu.consensus.common.bft.statemachine.FutureMessageBuffer;
 import org.hyperledger.besu.consensus.common.validator.ValidatorProvider;
+import org.hyperledger.besu.consensus.bel.BelValidatorProvider;
+import org.hyperledger.besu.consensus.bel.BelProposerSelector;
+import org.hyperledger.besu.consensus.bel.DeterministicTestVrfProvider;
 import org.hyperledger.besu.consensus.common.validator.blockbased.BlockValidatorProvider;
 import org.hyperledger.besu.consensus.qbft.QbftExtraDataCodec;
 import org.hyperledger.besu.consensus.qbft.QbftForksSchedulesFactory;
@@ -200,7 +203,8 @@ public class QbftBesuControllerBuilder extends BftBesuControllerBuilder {
         protocolContext.getConsensusContext(BftContext.class).getValidatorProvider();
 
     final ProposerSelector proposerSelector =
-        new ProposerSelector(blockchain, bftBlockInterface().get(), true, validatorProvider);
+        new BelProposerSelector(
+            blockchain, (BelValidatorProvider) validatorProvider);
 
     // NOTE: peers should not be used for accessing the network as it does not enforce the
     // "only send once" filter applied by the UniqueMessageMulticaster.
@@ -389,7 +393,17 @@ public class QbftBesuControllerBuilder extends BftBesuControllerBuilder {
         new ForkingValidatorProvider(
             blockchain, qbftForksSchedule, blockValidatorProvider, transactionValidatorProvider);
 
-    return new BftContext(validatorProvider, epochManager, bftBlockInterface().get());
+    // Hackathon BEL profile: keep the RFC 9381 backend isolated and use the explicitly test-only
+    // deterministic provider. The provider is injected into BftContext so every existing QBFT
+    // component consumes the same BEL committee view.
+    final ValidatorProvider belValidatorProvider =
+        new BelValidatorProvider(
+            validatorProvider,
+            blockchain,
+            genesisConfigOptions.getChainId().orElse(java.math.BigInteger.ZERO),
+            new DeterministicTestVrfProvider());
+
+    return new BftContext(belValidatorProvider, epochManager, bftBlockInterface().get());
   }
 
   private BftValidatorOverrides convertBftForks(final List<QbftFork> bftForks) {

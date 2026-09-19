@@ -1,0 +1,11 @@
+apply plugin: 'java-library'
+
+dependencies {
+  implementation project(':consensus:common')
+  implementation project(':crypto:algorithms')
+  implementation project(':datatypes')
+  implementation project(':ethereum:core')
+  implementation project(':evm')
+  testImplementation 'org.assertj:assertj-core'
+  testImplementation 'org.junit.jupiter:junit-jupiter'
+}
