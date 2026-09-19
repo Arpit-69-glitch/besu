@@ -42,6 +42,7 @@ import org.hyperledger.besu.consensus.common.bft.protocol.BftProtocolManager;
 import org.hyperledger.besu.consensus.common.bft.statemachine.BftEventHandler;
 import org.hyperledger.besu.consensus.common.bft.statemachine.BftFinalState;
 import org.hyperledger.besu.consensus.common.bft.statemachine.FutureMessageBuffer;
+import org.hyperledger.besu.consensus.common.validator.CommitteeProvider;
 import org.hyperledger.besu.consensus.common.validator.ValidatorProvider;
 import org.hyperledger.besu.consensus.bel.BelValidatorProvider;
 import org.hyperledger.besu.consensus.bel.BelProposerSelector;
@@ -131,11 +132,17 @@ public class QbftBesuControllerBuilder extends BftBesuControllerBuilder {
       final ProtocolSchedule protocolSchedule,
       final MiningParameters miningParameters) {
 
+    final ValidatorProvider consensusValidatorProvider =
+        protocolContext.getConsensusContext(BftContext.class).getValidatorProvider();
+    final CommitteeProvider committeeProvider =
+        consensusValidatorProvider instanceof CommitteeProvider cp ? cp : null;
+
     return new QbftJsonRpcMethods(
         protocolContext,
         protocolSchedule,
         miningParameters,
-        createReadOnlyValidatorProvider(protocolContext.getBlockchain()));
+        createReadOnlyValidatorProvider(protocolContext.getBlockchain()),
+        committeeProvider);
   }
 
   private ValidatorProvider createReadOnlyValidatorProvider(final Blockchain blockchain) {

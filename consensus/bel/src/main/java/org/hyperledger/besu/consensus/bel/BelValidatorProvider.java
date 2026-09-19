@@ -1,5 +1,6 @@
 package org.hyperledger.besu.consensus.bel;
 
+import org.hyperledger.besu.consensus.common.validator.CommitteeProvider;
 import org.hyperledger.besu.consensus.common.validator.ValidatorProvider;
 import org.hyperledger.besu.consensus.common.validator.VoteProvider;
 import org.hyperledger.besu.datatypes.Address;
@@ -24,7 +25,7 @@ import java.util.Optional;
  * <p>The deterministic provider is intentionally injected and is only suitable for the hackathon
  * demonstration. It is not RFC 9381 cryptography and must not be used as production security.
  */
-public final class BelValidatorProvider implements ValidatorProvider {
+public final class BelValidatorProvider implements ValidatorProvider, CommitteeProvider {
   private final ValidatorProvider delegate;
   private final Blockchain blockchain;
   private final String chainId;
@@ -62,6 +63,11 @@ public final class BelValidatorProvider implements ValidatorProvider {
 
   String chainId() {
     return chainId;
+  }
+
+  @Override
+  public Collection<Address> getCommitteeForBlock(final BlockHeader header) {
+    return getValidatorsForBlock(header);
   }
 
   public List<Address> committeeForBlock(final BlockHeader parentHeader, final long height) {

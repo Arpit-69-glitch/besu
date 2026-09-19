@@ -16,7 +16,9 @@ package org.hyperledger.besu.consensus.qbft.jsonrpc;
 
 import org.hyperledger.besu.consensus.common.BlockInterface;
 import org.hyperledger.besu.consensus.common.bft.BftContext;
+import org.hyperledger.besu.consensus.common.validator.CommitteeProvider;
 import org.hyperledger.besu.consensus.common.validator.ValidatorProvider;
+import org.hyperledger.besu.consensus.qbft.jsonrpc.methods.BelGetCommittee;
 import org.hyperledger.besu.consensus.qbft.jsonrpc.methods.QbftDiscardValidatorVote;
 import org.hyperledger.besu.consensus.qbft.jsonrpc.methods.QbftGetPendingVotes;
 import org.hyperledger.besu.consensus.qbft.jsonrpc.methods.QbftGetSignerMetrics;
@@ -32,6 +34,7 @@ import org.hyperledger.besu.ethereum.core.MiningParameters;
 import org.hyperledger.besu.ethereum.mainnet.ProtocolSchedule;
 
 import java.util.Map;
+import java.util.Optional;
 
 /** The Qbft json rpc methods. */
 public class QbftJsonRpcMethods extends ApiGroupJsonRpcMethods {
@@ -40,6 +43,7 @@ public class QbftJsonRpcMethods extends ApiGroupJsonRpcMethods {
   private final ValidatorProvider readOnlyValidatorProvider;
   private final ProtocolSchedule protocolSchedule;
   private final MiningParameters miningParameters;
+  private final Optional<CommitteeProvider> committeeProvider;
 
   /**
    * Instantiates a new Qbft json rpc methods.
@@ -53,11 +57,13 @@ public class QbftJsonRpcMethods extends ApiGroupJsonRpcMethods {
       final ProtocolContext context,
       final ProtocolSchedule protocolSchedule,
       final MiningParameters miningParameters,
-      final ValidatorProvider readOnlyValidatorProvider) {
+      final ValidatorProvider readOnlyValidatorProvider,
+      final CommitteeProvider committeeProvider) {
     this.context = context;
     this.readOnlyValidatorProvider = readOnlyValidatorProvider;
     this.protocolSchedule = protocolSchedule;
     this.miningParameters = miningParameters;
+    this.committeeProvider = Optional.ofNullable(committeeProvider);
   }
 
   @Override
@@ -77,12 +83,21 @@ public class QbftJsonRpcMethods extends ApiGroupJsonRpcMethods {
     final BlockInterface blockInterface = bftContext.getBlockInterface();
     final ValidatorProvider validatorProvider = bftContext.getValidatorProvider();
 
-    return mapOf(
-        new QbftProposeValidatorVote(validatorProvider),
-        new QbftGetValidatorsByBlockNumber(blockchainQueries, readOnlyValidatorProvider),
-        new QbftDiscardValidatorVote(validatorProvider),
-        new QbftGetValidatorsByBlockHash(context.getBlockchain(), readOnlyValidatorProvider),
-        new QbftGetSignerMetrics(readOnlyValidatorProvider, blockInterface, blockchainQueries),
-        new QbftGetPendingVotes(validatorProvider));
+    final Map<String, JsonRpcMethod> methods =
+        new java.util.HashMap<>(
+            mapOf(
+                new QbftProposeValidatorVote(validatorProvider),
+                new QbftGetValidatorsByBlockNumber(blockchainQueries, readOnlyValidatorProvider),
+                new QbftDiscardValidatorVote(validatorProvider),
+                new QbftGetValidatorsByBlockHash(context.getBlockchain(), readOnlyValidatorProvider),
+                new QbftGetSignerMetrics(
+                    readOnlyValidatorProvider, blockInterface, blockchainQueries),
+                new QbftGetPendingVotes(validatorProvider)));
+    committeeProvider.ifPresent(
+        provider -> {
+          final BelGetCommittee method = new BelGetCommittee(blockchainQueries, provider);
+          methods.put(method.getName(), method);
+        });
+    return methods;
   }
 }
