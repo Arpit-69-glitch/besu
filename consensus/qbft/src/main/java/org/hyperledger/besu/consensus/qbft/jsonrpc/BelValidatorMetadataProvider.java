@@ -3,6 +3,7 @@ package org.hyperledger.besu.consensus.qbft.jsonrpc;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hyperledger.besu.consensus.common.validator.ValidatorProvider;
+import org.hyperledger.besu.consensus.qbft.validator.ValidatorContractController;
 import org.hyperledger.besu.crypto.SECPPublicKey;
 import org.hyperledger.besu.crypto.SignatureAlgorithmFactory;
 import org.hyperledger.besu.datatypes.Address;
@@ -36,6 +37,8 @@ public final class BelValidatorMetadataProvider {
   private final Path registryPath;
   private final Map<Address, String> publicKeys = new LinkedHashMap<>();
   private final Map<Address, String> joinedAtCache = new LinkedHashMap<>();
+  private ValidatorContractController registry;
+  private Address registryAddress;
   private boolean loaded;
 
   public BelValidatorMetadataProvider(
@@ -50,6 +53,8 @@ public final class BelValidatorMetadataProvider {
     this.validatorProvider = validatorProvider;
     this.blockchainQueries = blockchainQueries;
     this.registryPath = registryPath;
+    this.registry = null;
+    this.registryAddress = null;
   }
 
   private static Path configuredRegistryPath() {
@@ -59,9 +64,18 @@ public final class BelValidatorMetadataProvider {
         : Path.of(configured);
   }
 
+  public BelValidatorMetadataProvider(
+      final ValidatorProvider validatorProvider,
+      final BlockchainQueries blockchainQueries,
+      final ValidatorContractController registry,
+      final Address registryAddress) {
+    this(validatorProvider, blockchainQueries, configuredRegistryPath());
+    this.registry = registry;
+    this.registryAddress = registryAddress;
+  }
   public synchronized List<Map<String, String>> metadata(
       final BlockHeader header, final Collection<Address> activeValidators) {
-    loadRegistry();
+    try { loadRegistry(); } catch (IllegalStateException ignored) { if (registry == null) throw ignored; loaded = true; }
     final Set<Address> allValidators = new LinkedHashSet<>(publicKeys.keySet());
     allValidators.addAll(activeValidators);
     for (final Address active : activeValidators) {
@@ -74,7 +88,15 @@ public final class BelValidatorMetadataProvider {
     final Map<Address, String> joinedAt = joinedAtFor(allValidators, header.getNumber());
     final List<Map<String, String>> result = new ArrayList<>();
     for (final Address address : allValidators) {
-      final String publicKey = publicKeys.get(address);
+      String publicKey = publicKeys.get(address);
+      if (registry != null && registryAddress != null) {
+        try {
+          final String onChain = registry.getPublicKey(header.getNumber(), registryAddress, address);
+          if (onChain != null && !onChain.isBlank()) publicKey = onChain;
+        } catch (RuntimeException ignored) {
+          // Genesis validators may predate ValidatorRegistry; file metadata is a bootstrap fallback.
+        }
+      }
       if (publicKey == null) {
         throw new IllegalStateException(
             "Validator has no registered public key: " + address);
@@ -167,3 +189,6 @@ public final class BelValidatorMetadataProvider {
     }
   }
 }
+
+
+

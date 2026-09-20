@@ -142,7 +142,9 @@ public class QbftBesuControllerBuilder extends BftBesuControllerBuilder {
         protocolSchedule,
         miningParameters,
         createReadOnlyValidatorProvider(protocolContext.getBlockchain()),
-        committeeProvider);
+        committeeProvider,
+        new ValidatorContractController(new TransactionSimulator(protocolContext.getBlockchain(), protocolContext.getWorldStateArchive(), protocolSchedule, 0L)),
+        qbftForksSchedule.getFork(protocolContext.getBlockchain().getChainHeadBlockNumber()).getValue().getValidatorContractAddress().map(Address::fromHexString));
   }
 
   private ValidatorProvider createReadOnlyValidatorProvider(final Blockchain blockchain) {
@@ -445,3 +447,5 @@ public class QbftBesuControllerBuilder extends BftBesuControllerBuilder {
                 block.getHash().toHexString()));
   }
 }
+
+

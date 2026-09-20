@@ -72,6 +72,11 @@ public class ValidatorContractController {
    * @param contractAddress the contract address
    * @return the validators
    */
+  public String getPublicKey(final long blockNumber, final Address contractAddress, final Address validator) {
+    final Function function = new Function("publicKeyOf", List.of(new org.web3j.abi.datatypes.Address(validator.toString())), List.of(new TypeReference<org.web3j.abi.datatypes.Utf8String>() {}));
+    return callFunction(blockNumber, function, contractAddress).map(result -> (String) decodeResult(result, function).get(0).getValue()).orElse("");
+  }
+
   public Collection<Address> getValidators(final long blockNumber, final Address contractAddress) {
     return callFunction(blockNumber, getValidatorsFunction, contractAddress)
         .map(this::parseGetValidatorsResult)
@@ -122,3 +127,7 @@ public class ValidatorContractController {
     }
   }
 }
+
+
+
+

@@ -26,6 +26,8 @@ import org.hyperledger.besu.consensus.qbft.jsonrpc.methods.QbftGetSignerMetrics;
 import org.hyperledger.besu.consensus.qbft.jsonrpc.methods.QbftGetValidatorsByBlockHash;
 import org.hyperledger.besu.consensus.qbft.jsonrpc.methods.QbftGetValidatorsByBlockNumber;
 import org.hyperledger.besu.consensus.qbft.jsonrpc.methods.QbftProposeValidatorVote;
+import org.hyperledger.besu.consensus.qbft.validator.ValidatorContractController;
+import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.ethereum.ProtocolContext;
 import org.hyperledger.besu.ethereum.api.jsonrpc.RpcApis;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.JsonRpcMethod;
@@ -45,6 +47,8 @@ public class QbftJsonRpcMethods extends ApiGroupJsonRpcMethods {
   private final ProtocolSchedule protocolSchedule;
   private final MiningParameters miningParameters;
   private final Optional<CommitteeProvider> committeeProvider;
+  private final ValidatorContractController registry;
+  private final Optional<Address> registryAddress;
 
   /**
    * Instantiates a new Qbft json rpc methods.
@@ -59,12 +63,16 @@ public class QbftJsonRpcMethods extends ApiGroupJsonRpcMethods {
       final ProtocolSchedule protocolSchedule,
       final MiningParameters miningParameters,
       final ValidatorProvider readOnlyValidatorProvider,
-      final CommitteeProvider committeeProvider) {
+      final CommitteeProvider committeeProvider,
+      final ValidatorContractController registry,
+      final Optional<Address> registryAddress) {
     this.context = context;
     this.readOnlyValidatorProvider = readOnlyValidatorProvider;
     this.protocolSchedule = protocolSchedule;
     this.miningParameters = miningParameters;
     this.committeeProvider = Optional.ofNullable(committeeProvider);
+    this.registry = registry;
+    this.registryAddress = registryAddress;
   }
 
   @Override
@@ -81,7 +89,7 @@ public class QbftJsonRpcMethods extends ApiGroupJsonRpcMethods {
             context.getWorldStateArchive(),
             miningParameters);
     final BelValidatorMetadataProvider metadataProvider =
-        new BelValidatorMetadataProvider(readOnlyValidatorProvider, blockchainQueries);
+        new BelValidatorMetadataProvider(readOnlyValidatorProvider, blockchainQueries, registry, registryAddress.orElse(null));
     final BftContext bftContext = context.getConsensusContext(BftContext.class);
     final BlockInterface blockInterface = bftContext.getBlockInterface();
     final ValidatorProvider validatorProvider = bftContext.getValidatorProvider();
@@ -106,3 +114,5 @@ public class QbftJsonRpcMethods extends ApiGroupJsonRpcMethods {
     return methods;
   }
 }
+
+
