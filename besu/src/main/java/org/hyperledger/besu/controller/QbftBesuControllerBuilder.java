@@ -19,6 +19,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import org.hyperledger.besu.config.BftFork;
 import org.hyperledger.besu.config.QbftConfigOptions;
 import org.hyperledger.besu.config.QbftFork;
+import org.hyperledger.besu.consensus.bel.BelProposerSelector;
+import org.hyperledger.besu.consensus.bel.BelValidatorProvider;
+import org.hyperledger.besu.consensus.bel.DeterministicTestVrfProvider;
 import org.hyperledger.besu.consensus.common.BftValidatorOverrides;
 import org.hyperledger.besu.consensus.common.EpochManager;
 import org.hyperledger.besu.consensus.common.ForksSchedule;
@@ -44,9 +47,6 @@ import org.hyperledger.besu.consensus.common.bft.statemachine.BftFinalState;
 import org.hyperledger.besu.consensus.common.bft.statemachine.FutureMessageBuffer;
 import org.hyperledger.besu.consensus.common.validator.CommitteeProvider;
 import org.hyperledger.besu.consensus.common.validator.ValidatorProvider;
-import org.hyperledger.besu.consensus.bel.BelValidatorProvider;
-import org.hyperledger.besu.consensus.bel.BelProposerSelector;
-import org.hyperledger.besu.consensus.bel.DeterministicTestVrfProvider;
 import org.hyperledger.besu.consensus.common.validator.blockbased.BlockValidatorProvider;
 import org.hyperledger.besu.consensus.qbft.QbftExtraDataCodec;
 import org.hyperledger.besu.consensus.qbft.QbftForksSchedulesFactory;
@@ -143,8 +143,17 @@ public class QbftBesuControllerBuilder extends BftBesuControllerBuilder {
         miningParameters,
         createReadOnlyValidatorProvider(protocolContext.getBlockchain()),
         committeeProvider,
-        new ValidatorContractController(new TransactionSimulator(protocolContext.getBlockchain(), protocolContext.getWorldStateArchive(), protocolSchedule, 0L)),
-        qbftForksSchedule.getFork(protocolContext.getBlockchain().getChainHeadBlockNumber()).getValue().getValidatorContractAddress().map(Address::fromHexString));
+        new ValidatorContractController(
+            new TransactionSimulator(
+                protocolContext.getBlockchain(),
+                protocolContext.getWorldStateArchive(),
+                protocolSchedule,
+                0L)),
+        qbftForksSchedule
+            .getFork(protocolContext.getBlockchain().getChainHeadBlockNumber())
+            .getValue()
+            .getValidatorContractAddress()
+            .map(Address::fromHexString));
   }
 
   private ValidatorProvider createReadOnlyValidatorProvider(final Blockchain blockchain) {
@@ -212,8 +221,7 @@ public class QbftBesuControllerBuilder extends BftBesuControllerBuilder {
         protocolContext.getConsensusContext(BftContext.class).getValidatorProvider();
 
     final ProposerSelector proposerSelector =
-        new BelProposerSelector(
-            blockchain, (BelValidatorProvider) validatorProvider);
+        new BelProposerSelector(blockchain, (BelValidatorProvider) validatorProvider);
 
     // NOTE: peers should not be used for accessing the network as it does not enforce the
     // "only send once" filter applied by the UniqueMessageMulticaster.
@@ -447,5 +455,3 @@ public class QbftBesuControllerBuilder extends BftBesuControllerBuilder {
                 block.getHash().toHexString()));
   }
 }
-
-
