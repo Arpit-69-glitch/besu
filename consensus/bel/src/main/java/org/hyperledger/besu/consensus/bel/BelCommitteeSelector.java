@@ -27,8 +27,24 @@ public final class BelCommitteeSelector {
   private BelCommitteeSelector() {}
 
   public static List<VrfTicket> select(final int validatorPopulation, final List<VrfTicket> tickets) {
-    if (validatorPopulation < MINIMUM_COMMITTEE_SIZE) {
-      throw new IllegalArgumentException("normal BEL deployment requires N >= 70");
+    return select(validatorPopulation, tickets, MINIMUM_COMMITTEE_SIZE);
+  }
+
+  /**
+   * Selects a committee for an explicitly selected execution profile. The
+   * two-argument overload above is the production protocol path and remains
+   * fixed at 70. The smaller value is only for a named local prototype
+   * runtime; it is never inferred from the validator population.
+   */
+  public static List<VrfTicket> select(
+      final int validatorPopulation,
+      final List<VrfTicket> tickets,
+      final int minimumCommitteeSize) {
+    if (minimumCommitteeSize < 1 || validatorPopulation < minimumCommitteeSize) {
+      throw new IllegalArgumentException(
+          minimumCommitteeSize == MINIMUM_COMMITTEE_SIZE
+              ? "normal BEL deployment requires N >= 70"
+              : "prototype BEL deployment requires N >= " + minimumCommitteeSize);
     }
     if (tickets == null || tickets.size() != validatorPopulation) {
       throw new IllegalArgumentException("one verified ticket is required per active validator");
@@ -42,9 +58,9 @@ public final class BelCommitteeSelector {
         selected.add(ticket);
       }
     }
-    final boolean fallback = selected.size() < MINIMUM_COMMITTEE_SIZE;
+    final boolean fallback = selected.size() < minimumCommitteeSize;
     final List<VrfTicket> result = fallback
-        ? new ArrayList<>(ordered.subList(0, MINIMUM_COMMITTEE_SIZE))
+        ? new ArrayList<>(ordered.subList(0, minimumCommitteeSize))
         : selected;
     result.sort(BelCommitteeSelector::compareTickets);
     return List.copyOf(result);

@@ -46,6 +46,22 @@ public final class BelCommitteeEvidence {
       final long height,
       final List<Candidate> candidates,
       final VrfProvider vrfProvider) {
+    return verifyAndSelect(
+        validatorPopulation,
+        seed,
+        height,
+        candidates,
+        vrfProvider,
+        BelCommitteeSelector.MINIMUM_COMMITTEE_SIZE);
+  }
+
+  public static List<BelCommitteeSelector.VrfTicket> verifyAndSelect(
+      final int validatorPopulation,
+      final byte[] seed,
+      final long height,
+      final List<Candidate> candidates,
+      final VrfProvider vrfProvider,
+      final int minimumCommitteeSize) {
     if (seed == null || seed.length == 0 || height < 0 || vrfProvider == null) {
       throw new IllegalArgumentException("invalid committee evidence inputs");
     }
@@ -72,7 +88,7 @@ public final class BelCommitteeEvidence {
                       validatorId, result.output(), candidate.proof().proof());
                 })
             .toList();
-    return BelCommitteeSelector.select(validatorPopulation, tickets);
+    return BelCommitteeSelector.select(validatorPopulation, tickets, minimumCommitteeSize);
   }
 
   /** Exact alpha encoding from the frozen BEL protocol: domain || seed || enc(height) || id. */

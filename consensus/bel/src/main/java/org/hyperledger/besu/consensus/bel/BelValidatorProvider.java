@@ -26,10 +26,13 @@ import java.util.Optional;
  * demonstration. It is not RFC 9381 cryptography and must not be used as production security.
  */
 public final class BelValidatorProvider implements ValidatorProvider, CommitteeProvider {
+  private static final String PROTOTYPE_PROFILE = "prototype";
+  private static final int PROTOTYPE_COMMITTEE_SIZE = 4;
   private final ValidatorProvider delegate;
   private final Blockchain blockchain;
   private final String chainId;
   private final VrfProvider vrfProvider;
+  private final int minimumCommitteeSize;
 
   public BelValidatorProvider(
       final ValidatorProvider delegate,
@@ -40,6 +43,10 @@ public final class BelValidatorProvider implements ValidatorProvider, CommitteeP
     this.blockchain = blockchain;
     this.chainId = chainId == null ? "0" : chainId.toString();
     this.vrfProvider = vrfProvider;
+    this.minimumCommitteeSize =
+        PROTOTYPE_PROFILE.equalsIgnoreCase(System.getProperty("bel.execution.profile", "production"))
+            ? PROTOTYPE_COMMITTEE_SIZE
+            : BelCommitteeSelector.MINIMUM_COMMITTEE_SIZE;
   }
 
   @Override
@@ -87,8 +94,11 @@ public final class BelValidatorProvider implements ValidatorProvider, CommitteeP
   private List<Address> select(final BlockHeader parentHeader, final long height) {
     final List<Address> population =
         new ArrayList<>(delegate.getValidatorsAfterBlock(parentHeader));
-    if (population.size() < BelCommitteeSelector.MINIMUM_COMMITTEE_SIZE) {
-      throw new IllegalStateException("BEL requires at least 70 active validators");
+    if (population.size() < minimumCommitteeSize) {
+      throw new IllegalStateException(
+          minimumCommitteeSize == BelCommitteeSelector.MINIMUM_COMMITTEE_SIZE
+              ? "BEL requires at least 70 active validators"
+              : "BEL prototype profile requires at least 4 active validators");
     }
 
     final byte[] seed =
@@ -106,7 +116,7 @@ public final class BelValidatorProvider implements ValidatorProvider, CommitteeP
             .toList();
 
     return BelCommitteeEvidence.verifyAndSelect(
-            population.size(), seed, height, evidence, vrfProvider)
+            population.size(), seed, height, evidence, vrfProvider, minimumCommitteeSize)
         .stream()
         .map(ticket -> Address.wrap(Bytes.wrap(ticket.validatorId())))
         .toList();
