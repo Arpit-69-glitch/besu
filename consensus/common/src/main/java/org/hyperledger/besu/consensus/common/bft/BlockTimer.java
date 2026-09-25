@@ -75,27 +75,27 @@ public class BlockTimer {
    * @param chainHeadHeader The header of the chain head
    */
   public synchronized void startTimer(
-      final ConsensusRoundIdentifier round, final BlockHeader chainHeadHeader) {
-    cancelTimer();
+    final ConsensusRoundIdentifier round, final BlockHeader chainHeadHeader) {
+  cancelTimer();
 
-    final long now = clock.millis();
+  final long now = clock.millis();
 
-    // absolute time when the timer is supposed to expire
-    final int blockPeriodSeconds =
-        forksSchedule.getFork(round.getSequenceNumber()).getValue().getBlockPeriodSeconds();
-    final long minimumTimeBetweenBlocksMillis = blockPeriodSeconds * 1000L;
-    final long expiryTime = chainHeadHeader.getTimestamp() * 1_000 + minimumTimeBetweenBlocksMillis;
+  // absolute time when the timer is supposed to expire
+  final int blockPeriodSeconds =
+      forksSchedule.getFork(round.getSequenceNumber()).getValue().getBlockPeriodSeconds();
+  final long minimumTimeBetweenBlocksMillis = blockPeriodSeconds * 1000L;
+  final long expiryTime = chainHeadHeader.getTimestamp() * 1_000 + minimumTimeBetweenBlocksMillis;
 
-    if (expiryTime > now) {
-      final long delay = expiryTime - now;
+  if (expiryTime > now) {
+    final long delay = expiryTime - now;
 
-      final Runnable newTimerRunnable = () -> queue.add(new BlockTimerExpiry(round));
+    final Runnable newTimerRunnable = () -> queue.add(new BlockTimerExpiry(round));
 
-      final ScheduledFuture<?> newTimerTask =
-          bftExecutors.scheduleTask(newTimerRunnable, delay, TimeUnit.MILLISECONDS);
-      currentTimerTask = Optional.of(newTimerTask);
-    } else {
-      queue.add(new BlockTimerExpiry(round));
-    }
+    final ScheduledFuture<?> newTimerTask =
+        bftExecutors.scheduleTask(newTimerRunnable, delay, TimeUnit.MILLISECONDS);
+    currentTimerTask = Optional.of(newTimerTask);
+  } else {
+    queue.add(new BlockTimerExpiry(round));
   }
+}
 }

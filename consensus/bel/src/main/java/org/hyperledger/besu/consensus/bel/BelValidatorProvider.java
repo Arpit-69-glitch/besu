@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Comparator;
 
 /**
  * BEL's consensus-facing validator view.
@@ -94,6 +95,7 @@ public final class BelValidatorProvider implements ValidatorProvider, CommitteeP
   private List<Address> select(final BlockHeader parentHeader, final long height) {
     final List<Address> population =
         new ArrayList<>(delegate.getValidatorsAfterBlock(parentHeader));
+
     if (population.size() < minimumCommitteeSize) {
       throw new IllegalStateException(
           minimumCommitteeSize == BelCommitteeSelector.MINIMUM_COMMITTEE_SIZE
@@ -115,10 +117,14 @@ public final class BelValidatorProvider implements ValidatorProvider, CommitteeP
                 })
             .toList();
 
-    return BelCommitteeEvidence.verifyAndSelect(
+    final List<Address> committee =
+    BelCommitteeEvidence.verifyAndSelect(
             population.size(), seed, height, evidence, vrfProvider, minimumCommitteeSize)
         .stream()
         .map(ticket -> Address.wrap(Bytes.wrap(ticket.validatorId())))
+        .sorted(Comparator.comparing(Address::toString))
         .toList();
+
+return committee;
   }
 }

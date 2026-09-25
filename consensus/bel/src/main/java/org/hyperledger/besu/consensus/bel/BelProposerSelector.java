@@ -36,9 +36,15 @@ public final class BelProposerSelector extends ProposerSelector {
     final List<Address> committee = validatorProvider.committeeForBlock(parent, height);
     final List<byte[]> canonicalCommittee =
         committee.stream().map(Address::toArray).toList();
-    return Address.wrap(
-        Bytes.wrap(
-            BelLeaderSelector.select(
-                seed, height, roundIdentifier.getRoundNumber(), canonicalCommittee)));
+    final Address selectedProposer =
+        Address.wrap(
+            Bytes.wrap(
+                BelLeaderSelector.select(
+                    seed,
+                    height,
+                    roundIdentifier.getRoundNumber(),
+                    canonicalCommittee)));
+
+    return selectedProposer;
   }
 }
